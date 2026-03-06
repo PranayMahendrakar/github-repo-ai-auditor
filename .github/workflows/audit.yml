@@ -1,0 +1,49 @@
+name: GitHub Repo AI Auditor
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_url:
+        description: 'GitHub repository URL to audit'
+        required: true
+        default: 'github.com/PranayMahendrakar/github-repo-ai-auditor'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-v1
+      - name: Install dependencies
+        run: |
+          pip install transformers torch --index-url https://download.pytorch.org/whl/cpu
+          pip install networkx radon pyflakes gitpython
+      - name: Clone target repo
+        run: |
+          REPO="${{ github.event.inputs.repo_url }}"
+          REPO=$(echo "$REPO" | sed 's|https://github.com/||;s|github.com/||')
+          git clone --depth=1 "https://github.com/$REPO" target_repo
+      - name: Run analyzer
+        run: python analyzer/analyze.py target_repo "${{ github.event.inputs.repo_url }}" docs/report.json
+      - name: Generate HTML
+        run: python analyzer/generate_report.py docs/report.json docs/index.html
+      - name: Push report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          git diff --staged --quiet || git commit -m "Audit: ${{ github.event.inputs.repo_url }}"
+          git push
