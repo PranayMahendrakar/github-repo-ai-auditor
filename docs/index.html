@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Repo AI Auditor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .hero {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 60%, #0c1a2e 100%);
+      padding: 80px 24px 60px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #4f46e522 0%, transparent 70%);
+      top: -200px; left: 50%; transform: translateX(-50%);
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      background: linear-gradient(90deg, #818cf8, #38bdf8, #22d3ee);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .hero p {
+      color: #94a3b8;
+      font-size: 1.1rem;
+      max-width: 580px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+      position: relative;
+    }
+    .badges {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+      position: relative;
+    }
+    .badge {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .badge.green { border-color: #166534; color: #4ade80; }
+    .badge.blue  { border-color: #1e40af; color: #60a5fa; }
+    .badge.purple{ border-color: #4c1d95; color: #a78bfa; }
+
+    .audit-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 580px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .repo-input {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .repo-input:focus { border-color: #6366f1; }
+    .repo-input::placeholder { color: #475569; }
+    .audit-btn {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .audit-btn:hover { background: linear-gradient(135deg, #818cf8, #6366f1); transform: translateY(-1px); }
+    .audit-btn:active { transform: translateY(0); }
+    .hint { font-size: 0.8rem; color: #475569; text-align: left; }
+    .hint a { color: #6366f1; text-decoration: none; }
+
+    .how-section {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+    .how-section h2 {
+      text-align: center;
+      font-size: 1.6rem;
+      color: #f1f5f9;
+      margin-bottom: 40px;
+    }
+    .pipeline {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+    .pipe-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      flex: 1;
+      min-width: 140px;
+      max-width: 200px;
+    }
+    .pipe-icon {
+      width: 64px; height: 64px;
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .pipe-step h3 { font-size: 0.85rem; color: #e2e8f0; font-weight: 600; margin-bottom: 4px; }
+    .pipe-step p { font-size: 0.75rem; color: #64748b; }
+    .pipe-arrow {
+      flex: 0 0 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #334155;
+      font-size: 1.5rem;
+      margin-top: 20px;
+    }
+
+    .features {
+      background: #0a1225;
+      padding: 60px 24px;
+    }
+    .features h2 {
+      text-align: center;
+      font-size: 1.6rem;
+      color: #f1f5f9;
+      margin-bottom: 40px;
+    }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .feat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+    .feat-card:hover { border-color: #6366f1; }
+    .feat-card .icon { font-size: 2rem; margin-bottom: 12px; }
+    .feat-card h3 { font-size: 1rem; font-weight: 600; color: #f1f5f9; margin-bottom: 8px; }
+    .feat-card p { font-size: 0.85rem; color: #94a3b8; line-height: 1.6; }
+
+    .output-preview {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+    .output-preview h2 {
+      text-align: center;
+      font-size: 1.6rem;
+      color: #f1f5f9;
+      margin-bottom: 40px;
+    }
+    .output-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .output-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .output-card h3 { font-size: 0.9rem; color: #818cf8; font-weight: 600; margin-bottom: 8px; }
+    .output-card p { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; }
+
+    .footer {
+      text-align: center;
+      padding: 32px 24px;
+      color: #475569;
+      font-size: 0.82rem;
+      border-top: 1px solid #1e293b;
+      margin-top: auto;
+    }
+    .footer a { color: #6366f1; text-decoration: none; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: #00000088;
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+      transform: translateY(20px);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal h2 { font-size: 1.3rem; color: #f1f5f9; margin-bottom: 12px; }
+    .modal p { font-size: 0.9rem; color: #94a3b8; line-height: 1.7; margin-bottom: 16px; }
+    .modal .steps { list-style: none; counter-reset: steps; }
+    .modal .steps li {
+      counter-increment: steps;
+      display: flex; gap: 12px;
+      margin-bottom: 12px;
+      font-size: 0.875rem;
+      color: #cbd5e1;
+    }
+    .modal .steps li::before {
+      content: counter(steps);
+      flex-shrink: 0;
+      width: 24px; height: 24px;
+      background: #6366f1;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; color: white;
+    }
+    .modal-link {
+      display: block;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      border-radius: 8px;
+      padding: 12px 20px;
+      text-align: center;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-top: 8px;
+    }
+    .modal-close {
+      float: right;
+      background: none; border: none;
+      color: #94a3b8; font-size: 1.3rem;
+      cursor: pointer; line-height: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <h1>🤖 GitHub Repo AI Auditor</h1>
+    <p>
+      Analyze any public GitHub repository with open-source AI models.
+      Get instant reports on code quality, architecture, security risks, and improvement suggestions.
+      <strong style="color:#e2e8f0">No API keys. No signup. 100% open-source.</strong>
+    </p>
+    <div class="badges">
+      <span class="badge green">✅ No API Keys</span>
+      <span class="badge blue">⚡ DistilGPT2 / Phi-2</span>
+      <span class="badge purple">🔒 Open Source</span>
+      <span class="badge">🏃 GitHub Actions</span>
+      <span class="badge">📄 GitHub Pages</span>
+    </div>
+    <div class="audit-box">
+      <div class="input-row">
+        <input
+          type="text"
+          id="repoInput"
+          class="repo-input"
+          placeholder="github.com/user/repository"
+          value="github.com/PranayMahendrakar/github-repo-ai-auditor"
+        />
+        <button class="audit-btn" onclick="startAudit()">▶ Audit</button>
+      </div>
+      <p class="hint">
+        Triggers a GitHub Actions run →
+        <a href="https://github.com/PranayMahendrakar/github-repo-ai-auditor/actions" target="_blank">View runs</a>
+        · Report appears at <a href="./report.html">report.html</a> after completion
+      </p>
+    </div>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="how-section">
+    <h2>⚙️ How It Works</h2>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-icon">📥</div>
+        <h3>1. Clone Repo</h3>
+        <p>GitHub Actions clones the target repository</p>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🔍</div>
+        <h3>2. Parse Code</h3>
+        <p>AST parsing, line counts, language detection</p>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🕸️</div>
+        <h3>3. Dep Graph</h3>
+        <p>NetworkX builds import/dependency graph</p>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🧠</div>
+        <h3>4. AI Analysis</h3>
+        <p>DistilGPT2 via HuggingFace Transformers</p>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="pipe-icon">📊</div>
+        <h3>5. HTML Report</h3>
+        <p>Beautiful report pushed to GitHub Pages</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="features">
+    <h2>✨ Features</h2>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="icon">📊</div>
+        <h3>Code Quality Score</h3>
+        <p>Cyclomatic complexity analysis, file metrics, and a 0–100 quality score.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">🏗️</div>
+        <h3>Architecture Analysis</h3>
+        <p>AI-generated description of project structure, patterns, and tech stack.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">🔐</div>
+        <h3>Security Risk Scan</h3>
+        <p>Static analysis for hardcoded secrets, SQL injection, unsafe deserialization, and more.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">💡</div>
+        <h3>Improvement Suggestions</h3>
+        <p>Actionable suggestions generated by the AI model based on detected issues.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">🕸️</div>
+        <h3>Dependency Graph</h3>
+        <p>Module-level dependency visualization using NetworkX graph analysis.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">🌐</div>
+        <h3>Language Breakdown</h3>
+        <p>Visual breakdown of all programming languages used in the repository.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output Preview -->
+  <div class="output-preview">
+    <h2>📤 Report Output</h2>
+    <div class="output-grid">
+      <div class="output-card">
+        <h3>Code Quality Score</h3>
+        <p>0–100 score based on complexity, issue count, and language-specific metrics.</p>
+      </div>
+      <div class="output-card">
+        <h3>Architecture Analysis</h3>
+        <p>AI description of the project's design pattern, stack, and module organization.</p>
+      </div>
+      <div class="output-card">
+        <h3>Security Risks</h3>
+        <p>Table of files with hardcoded secrets, dangerous functions, or injection vectors.</p>
+      </div>
+      <div class="output-card">
+        <h3>Improvement Suggestions</h3>
+        <p>Model-generated list of specific improvements tailored to the repo's issues.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>
+      Built with ❤️ by <a href="https://github.com/PranayMahendrakar">PranayMahendrakar</a> ·
+      <a href="https://github.com/PranayMahendrakar/github-repo-ai-auditor">View on GitHub</a> ·
+      Powered by <a href="https://huggingface.co/distilgpt2" target="_blank">DistilGPT2</a>,
+      <a href="https://github.com/features/actions" target="_blank">GitHub Actions</a> &amp;
+      <a href="https://pages.github.com" target="_blank">GitHub Pages</a>
+    </p>
+  </div>
+
+  <!-- Modal for audit instructions -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <h2>🚀 Start Audit</h2>
+      <p>The auditor runs as a GitHub Actions workflow. Follow these steps:</p>
+      <ol class="steps">
+        <li>Go to the GitHub Actions page for this repository.</li>
+        <li>Click <strong>GitHub Repo AI Auditor</strong> workflow on the left.</li>
+        <li>Click <strong>Run workflow</strong>, enter the repo URL, and click <strong>Run</strong>.</li>
+        <li>Wait ~5–10 minutes for the analysis to complete.</li>
+        <li>The report will be published to this GitHub Pages site.</li>
+      </ol>
+      <a
+        class="modal-link"
+        id="actionsLink"
+        href="https://github.com/PranayMahendrakar/github-repo-ai-auditor/actions/workflows/audit.yml"
+        target="_blank"
+      >
+        ▶ Open GitHub Actions
+      </a>
+    </div>
+  </div>
+
+  <script>
+    function startAudit() {
+      const repo = document.getElementById('repoInput').value.trim();
+      if (!repo) {
+        alert('Please enter a GitHub repository URL.');
+        return;
+      }
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('open');
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+  </script>
+</body>
+</html>
